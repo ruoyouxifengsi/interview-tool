@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>面试官助手 · 心路实践团</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --border: #2a2d3a;
+    --text: #e1e4ed;
+    --text-secondary: #8b8fa3;
+    --accent: #5b9bd5;
+    --accent-warm: #e2a654;
+    --green: #4caf91;
+    --yellow: #e2a654;
+    --red: #e0556a;
+    --ring-bg: #252836;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 4px 0;
+  }
+  .header h1 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .header .subtitle {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  /* Timer Section */
+  .timer-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .timer-ring-container {
+    position: relative;
+    width: 180px;
+    height: 180px;
+  }
+
+  .timer-ring-container svg {
+    transform: rotate(-90deg);
+    width: 180px;
+    height: 180px;
+  }
+
+  .ring-bg {
+    fill: none;
+    stroke: var(--ring-bg);
+    stroke-width: 7;
+  }
+
+  .ring-progress {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 7;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.3s linear, stroke 0.5s;
+  }
+
+  .ring-progress.warning { stroke: var(--yellow); }
+  .ring-progress.urgent { stroke: var(--red); }
+  .ring-progress.overtime { stroke: var(--red); animation: pulse-ring 0.6s ease-in-out infinite; }
+
+  @keyframes pulse-ring {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .timer-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .timer-display {
+    font-size: 2.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-family: "SF Mono", "JetBrains Mono", "Consolas", monospace;
+    letter-spacing: 2px;
+  }
+  .timer-display.overtime-text { color: var(--red); }
+
+  .timer-label {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .timer-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .btn {
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(0.96); }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary.running { background: var(--yellow); color: #1a1a1a; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-sm {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    border-radius: 6px;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+  .btn-ghost:hover { color: var(--text); }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--red);
+    border: 1px solid var(--red);
+    opacity: 0.7;
+  }
+
+  .btn-next {
+    background: var(--green);
+    color: #fff;
+    font-size: 1rem;
+    padding: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    flex: 1;
+    text-align: center;
+  }
+
+  .btn-outline:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .editing-badge {
+    display: inline-block;
+    background: var(--accent-warm);
+    color: #1a1a1a;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 8px;
+    margin-left: 6px;
+    animation: pulse-badge 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse-badge {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .history-table tr { cursor: pointer; }
+  .history-table tr:hover { background: rgba(255,255,255,0.03); }
+
+  /* Duration select */
+  .duration-group {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 3px;
+  }
+
+  .duration-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.12s;
+  }
+  .duration-btn.active { background: var(--accent); color: #fff; }
+
+  /* ====== QUEUE SECTION ====== */
+  .queue-section {
+    background: var(--surface);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .queue-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    cursor: pointer;
+  }
+
+  .queue-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .queue-progress {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  .queue-current {
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .queue-current.empty { color: var(--text-secondary); font-weight: 400; }
+
+  .queue-next-preview {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 140px;
+  }
+
+  .queue-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .import-badge {
+    background: var(--accent-warm);
+    color: #1a1a1a;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 10px;
+  }
+
+  .queue-expand {
+    border-top: 1px solid var(--border);
+    padding: 12px 14px;
+    display: none;
+  }
+  .queue-expand.open { display: block; }
+
+  .import-textarea {
+    width: 100%;
+    height: 120px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.82rem;
+    padding: 10px 12px;
+    resize: vertical;
+    outline: none;
+  }
+  .import-textarea:focus { border-color: var(--accent); }
+  .import-textarea::placeholder { color: #4a4d5a; }
+
+  .import-hint {
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  .import-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .queue-list {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 8px;
+    display: none;
+  }
+  .queue-list.has-items { display: block; }
+
+  .queue-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 8px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+  }
+  .queue-item.current {
+    background: rgba(91,155,213,0.12);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .queue-item.done {
+    color: var(--text-secondary);
+    text-decoration: line-through;
+    opacity: 0.5;
+  }
+  .queue-item .idx {
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    min-width: 28px;
+  }
+  .queue-item .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+  .queue-item .status-dot.waiting { background: var(--border); }
+  .queue-item .status-dot.current { background: var(--accent); }
+  .queue-item .status-dot.done { background: var(--green); }
+
+  /* Candidate Name */
+  .candidate-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .candidate-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 1rem;
+    color: var(--text);
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .candidate-input:focus { border-color: var(--accent); }
+  .candidate-input::placeholder { color: #4a4d5a; }
+
+  /* Scoring */
+  .scoring-section {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid var(--border);
+  }
+
+  .scoring-title {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+
+  .score-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .score-row:last-child { border-bottom: none; }
+
+  .score-label {
+    font-size: 0.88rem;
+    min-width: 65px;
+  }
+
+  .stars {
+    display: flex;
+    gap: 5px;
+  }
+
+  .star-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.12s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .star-btn:active { transform: scale(0.9); }
+  .star-btn.filled {
+    background: var(--accent-warm);
+    border-color: var(--accent-warm);
+    color: #1a1a1a;
+  }
+
+  .score-total {
+    text-align: right;
+    font-size: 0.82rem;
+    color: var(--accent-warm);
+    font-weight: 600;
+    min-width: 30px;
+  }
+
+  /* Action Bar */
+  .action-bar {
+    display: flex;
+    gap: 8px;
+  }
+  .action-bar .btn { flex: 1; text-align: center; }
+
+  /* Keyboard hints */
+  .kb-hint {
+    font-size: 0.65rem;
+    color: #3a3d4a;
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .kb-hint kbd {
+    display: inline-block;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: inherit;
+    font-size: 0.6rem;
+  }
+
+  /* History */
+  .history-section {
+    background: var(--surface);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .history-header.open { border-bottom-color: var(--border); }
+
+  .history-title { font-size: 0.82rem; font-weight: 600; }
+  .history-count { font-size: 0.75rem; color: var(--text-secondary); margin-left: 8px; }
+  .history-arrow {
+    color: var(--text-secondary);
+    font-size: 0.65rem;
+    transition: transform 0.2s;
+  }
+  .history-header.open .history-arrow { transform: rotate(180deg); }
+
+  .history-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+  .history-body.open { max-height: 500px; overflow-y: auto; }
+
+  .history-table {
+    width: 100%;
+    font-size: 0.73rem;
+    border-collapse: collapse;
+  }
+  .history-table th {
+    background: var(--bg);
+    color: var(--text-secondary);
+    font-weight: 500;
+    padding: 7px 8px;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .history-table td {
+    padding: 7px 8px;
+    border-top: 1px solid var(--border);
+  }
+  .history-table .td-score { color: var(--accent-warm); font-weight: 600; }
+  .history-table .td-time { color: var(--text-secondary); font-size: 0.68rem; }
+
+  .history-empty {
+    padding: 28px 16px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+  }
+
+  .history-actions {
+    display: flex;
+    gap: 8px;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--accent);
+    color: #fff;
+    padding: 10px 24px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    pointer-events: none;
+    transition: transform 0.3s ease;
+    z-index: 100;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--green); }
+
+  /* Modal overlay */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 50;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 16px;
+  }
+  .modal-overlay.hidden { display: none; }
+
+  .modal-sheet {
+    background: var(--surface);
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    max-width: 480px;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 20px 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .modal-handle {
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    margin: 0 auto 4px;
+  }
+
+  .modal-title {
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  /* Responsive */
+  @media (max-width: 380px) {
+    .timer-ring-container { width: 150px; height: 150px; }
+    .timer-ring-container svg { width: 150px; height: 150px; }
+    .timer-display { font-size: 2rem; }
+    .star-btn { width: 28px; height: 28px; font-size: 0.8rem; }
+    .score-label { font-size: 0.8rem; min-width: 55px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>面试官助手</h1>
+    <div class="subtitle">心路实践团 · 2026暑期招新</div>
+  </div>
+
+  <!-- Timer -->
+  <div class="timer-section">
+    <div class="timer-ring-container" id="timerRing">
+      <svg viewBox="0 0 180 180">
+        <circle class="ring-bg" cx="90" cy="90" r="83"/>
+        <circle class="ring-progress" id="ringProgress" cx="90" cy="90" r="83"
+                stroke-dasharray="521.5" stroke-dashoffset="0"/>
+      </svg>
+      <div class="timer-center">
+        <div class="timer-display" id="timerDisplay">10:00</div>
+        <div class="timer-label" id="timerLabel">准备开始</div>
+      </div>
+    </div>
+
+    <div class="timer-controls">
+      <button class="btn btn-primary" id="btnStart" onclick="toggleTimer()">▶ 开始面试</button>
+      <button class="btn btn-outline" id="btnReset" onclick="resetTimer()">↺</button>
+    </div>
+
+    <div class="duration-group" id="durationGroup">
+      <button class="duration-btn" data-min="5" onclick="setDuration(5)">5min</button>
+      <button class="duration-btn active" data-min="10" onclick="setDuration(10)">10min</button>
+      <button class="duration-btn" data-min="15" onclick="setDuration(15)">15min</button>
+      <button class="duration-btn" data-min="20" onclick="setDuration(20)">20min</button>
+    </div>
+  </div>
+
+  <!-- ====== QUEUE ====== -->
+  <div class="queue-section">
+    <div class="queue-bar" onclick="toggleQueueExpand()">
+      <div class="queue-info">
+        <span class="queue-progress" id="queueProgress">就绪</span>
+        <span class="queue-current" id="queueCurrent">未导入名单</span>
+      </div>
+      <div class="queue-actions">
+        <span class="import-badge hidden" id="importBadge">名单</span>
+        <button class="btn btn-sm btn-outline" onclick="event.stopPropagation();openImportModal()">导入名单</button>
+        <span style="font-size:0.6rem;color:var(--text-secondary);margin-left:2px" id="queueArrow">▶</span>
+      </div>
+    </div>
+    <div class="queue-expand" id="queueExpand">
+      <div class="queue-list" id="queueList"></div>
+    </div>
+  </div>
+
+  <!-- Candidate Name -->
+  <div class="candidate-row">
+    <input class="candidate-input" id="candidateName" type="text"
+           placeholder="输入候选人姓名..." autocomplete="off">
+  </div>
+
+  <!-- Scoring -->
+  <div class="scoring-section">
+    <div class="scoring-title">快速评分</div>
+    <div id="scoreRows"></div>
+  </div>
+
+  <!-- Actions -->
+  <div class="action-bar">
+    <button class="btn btn-outline" id="btnPrev" onclick="prevCandidate()" disabled>← 上一位</button>
+    <button class="btn btn-next" id="btnNext" onclick="nextCandidate()">→ 下一位</button>
+  </div>
+
+  <!-- KB Hints -->
+  <div class="kb-hint">
+    <span><kbd>Space</kbd> 开始/暂停</span>
+    <span><kbd>N</kbd> 下一位</span>
+    <span><kbd>B</kbd> 上一位</span>
+    <span><kbd>1-5</kbd> 综合评分</span>
+    <span><kbd>E</kbd> 导出</span>
+    <span><kbd>Esc</kbd> 取消编辑</span>
+  </div>
+
+  <!-- History -->
+  <div class="history-section">
+    <div class="history-header" id="historyHeader" onclick="toggleHistory()">
+      <div>
+        <span class="history-title">面试记录</span>
+        <span class="history-count" id="historyCount"></span>
+      </div>
+      <span class="history-arrow">▼</span>
+    </div>
+    <div class="history-body" id="historyBody">
+      <div id="historyContent"></div>
+      <div class="history-actions">
+        <button class="btn btn-outline" onclick="exportData()" style="flex:1">导出数据</button>
+        <button class="btn btn-danger" onclick="clearHistory()" style="flex:none">清空记录</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Import Modal -->
+<div class="modal-overlay hidden" id="importModal" onclick="closeImportModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">导入面试名单</div>
+    <textarea class="import-textarea" id="importTextarea"
+      placeholder="粘贴候选人姓名，每行一个，例如：&#10;张三&#10;李四&#10;王五&#10;&#10;也支持用逗号、顿号、空格、换行分隔，会自动识别"></textarea>
+    <div class="import-hint">
+      <strong>支持格式：</strong>换行 / 逗号 / 顿号 / 空格 / 序号前缀 均可自动识别<br>
+      <strong>面试顺序：</strong>按粘贴顺序排列，点"下一位"自动推进
+    </div>
+    <div class="import-actions">
+      <button class="btn btn-primary" onclick="doImport()" style="flex:1">确认导入</button>
+      <button class="btn btn-outline" onclick="closeImportModal()">取消</button>
+    </div>
+    <div class="import-actions" style="margin-top:4px">
+      <button class="btn btn-sm btn-outline" onclick="demoImport()">填入演示数据</button>
+      <button class="btn btn-sm btn-outline" onclick="clearQueue()">清空队列</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ STATE ============
+const DIMENSIONS = [
+  { key: 'impression', label: '综合印象' },
+  { key: 'technical', label: '技术潜力' },
+  { key: 'teamwork',   label: '团队匹配' },
+  { key: 'express',    label: '沟通表达' },
+];
+
+const CIRCUMFERENCE = 2 * Math.PI * 83;
+
+// nameQueue: array of { name: string, status: 'waiting'|'current'|'done' }
+let state = {
+  duration: 10,
+  remaining: 10 * 60,
+  total: 10 * 60,
+  running: false,
+  intervalId: null,
+  scores: {},
+  history: [],
+  historyOpen: false,
+  queueOpen: false,
+  nameQueue: [],
+  queueIndex: -1,
+  editingIndex: -1,  // history index being edited, -1 = new candidate
+};
+
+// Load persisted
+try {
+  const sh = localStorage.getItem('xl_interview_history');
+  if (sh) state.history = JSON.parse(sh);
+  const sq = localStorage.getItem('xl_name_queue');
+  if (sq) state.nameQueue = JSON.parse(sq);
+  const si = localStorage.getItem('xl_queue_index');
+  if (si) state.queueIndex = parseInt(si);
+} catch(e) {}
+
+// ============ DOM REFS ============
+const $timerDisplay = document.getElementById('timerDisplay');
+const $timerLabel = document.getElementById('timerLabel');
+const $ringProgress = document.getElementById('ringProgress');
+const $btnStart = document.getElementById('btnStart');
+const $candidateName = document.getElementById('candidateName');
+const $scoreRows = document.getElementById('scoreRows');
+const $historyHeader = document.getElementById('historyHeader');
+const $historyBody = document.getElementById('historyBody');
+const $historyContent = document.getElementById('historyContent');
+const $historyCount = document.getElementById('historyCount');
+const $toast = document.getElementById('toast');
+const $queueProgress = document.getElementById('queueProgress');
+const $queueCurrent = document.getElementById('queueCurrent');
+const $queueList = document.getElementById('queueList');
+const $queueExpand = document.getElementById('queueExpand');
+const $queueArrow = document.getElementById('queueArrow');
+const $importBadge = document.getElementById('importBadge');
+const $importModal = document.getElementById('importModal');
+const $importTextarea = document.getElementById('importTextarea');
+const $btnNext = document.getElementById('btnNext');
+const $btnPrev = document.getElementById('btnPrev');
+
+// ============ SCORE ROWS ============
+function buildScoreRows() {
+  $scoreRows.innerHTML = DIMENSIONS.map(d => `
+    <div class="score-row">
+      <span class="score-label">${d.label}</span>
+      <div class="stars" data-key="${d.key}">
+        ${[1,2,3,4,5].map(n => `
+          <button class="star-btn" data-value="${n}" onclick="setScore('${d.key}', ${n})">${n}</button>
+        `).join('')}
+      </div>
+      <span class="score-total" id="total-${d.key}">-</span>
+    </div>
+  `).join('');
+}
+buildScoreRows();
+
+function resetScores() {
+  DIMENSIONS.forEach(d => state.scores[d.key] = 0);
+  updateScoreUI();
+}
+
+function setScore(key, value) {
+  state.scores[key] = state.scores[key] === value ? 0 : value;
+  updateScoreUI();
+}
+
+function updateScoreUI() {
+  DIMENSIONS.forEach(d => {
+    const row = document.querySelector(`.stars[data-key="${d.key}"]`);
+    const totalEl = document.getElementById(`total-${d.key}`);
+    if (!row) return;
+    const val = state.scores[d.key] || 0;
+    row.querySelectorAll('.star-btn').forEach(btn => {
+      btn.classList.toggle('filled', parseInt(btn.dataset.value) <= val);
+    });
+    if (totalEl) totalEl.textContent = val > 0 ? val : '-';
+  });
+}
+
+// ============ TIMER ============
+function setDuration(min) {
+  if (state.running) return;
+  state.duration = min;
+  state.total = min * 60;
+  state.remaining = state.total;
+  document.querySelectorAll('.duration-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.min) === min);
+  });
+  updateTimerDisplay();
+  updateRing();
+}
+
+function toggleTimer() {
+  state.running ? pauseTimer() : startTimer();
+}
+
+function startTimer() {
+  if (state.remaining <= 0) {
+    state.remaining = state.total;
+    updateTimerDisplay();
+    updateRing();
+  }
+  state.running = true;
+  $btnStart.textContent = '⏸ 暂停';
+  $btnStart.classList.add('running');
+  $timerLabel.textContent = '面试中...';
+  clearInterval(state.intervalId);
+  state.intervalId = setInterval(tick, 100);
+}
+
+function pauseTimer() {
+  state.running = false;
+  $btnStart.textContent = '▶ 继续';
+  $btnStart.classList.remove('running');
+  $timerLabel.textContent = '已暂停';
+  clearInterval(state.intervalId);
+  state.intervalId = null;
+}
+
+function resetTimer() {
+  pauseTimer();
+  state.remaining = state.total;
+  $btnStart.textContent = '▶ 开始面试';
+  $btnStart.classList.remove('running');
+  $timerLabel.textContent = '准备开始';
+  updateTimerDisplay();
+  updateRing();
+}
+
+function tick() {
+  if (!state.running) return;
+  state.remaining -= 0.1;
+  if (state.remaining < 0) state.remaining = 0;
+  updateTimerDisplay();
+  updateRing();
+  if (state.remaining <= 0) {
+    pauseTimer();
+    $timerLabel.textContent = '⏰ 时间到!';
+    vibrate();
+  }
+}
+
+function updateTimerDisplay() {
+  const sec = Math.ceil(state.remaining);
+  const min = Math.floor(sec / 60);
+  const s = sec % 60;
+  $timerDisplay.textContent = `${min}:${String(s).padStart(2, '0')}`;
+  $timerDisplay.classList.toggle('overtime-text', state.remaining <= 0);
+}
+
+function updateRing() {
+  const offset = CIRCUMFERENCE * (1 - state.remaining / state.total);
+  $ringProgress.style.strokeDashoffset = offset;
+  const pct = state.remaining / state.total;
+  $ringProgress.classList.remove('warning', 'urgent', 'overtime');
+  if (state.remaining <= 0) {
+    $ringProgress.classList.add('overtime');
+  } else if (pct < 0.15) {
+    $ringProgress.classList.add('urgent');
+  } else if (pct < 0.3) {
+    $ringProgress.classList.add('warning');
+  }
+}
+
+function vibrate() {
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+}
+
+// ============ QUEUE / IMPORT ============
+function parseNames(raw) {
+  // Split by newline, comma, Chinese comma, semicolon, Chinese顿号, or multiple spaces
+  const cleaned = raw
+    .replace(/[，、；;]/g, ',')
+    .replace(/\n+/g, ',')
+    .replace(/\r/g, '')
+    .replace(/\s+/g, ',');
+  const parts = cleaned.split(',').map(s => {
+    // Remove leading number+dot like "1." "1、" "1)" etc
+    return s.replace(/^\d+[.\)、\s]*/, '').trim();
+  }).filter(Boolean);
+  // Deduplicate while preserving order
+  return [...new Set(parts)];
+}
+
+function doImport() {
+  const raw = $importTextarea.value.trim();
+  if (!raw) { showToast('请粘贴名单'); return; }
+  const names = parseNames(raw);
+  if (names.length === 0) { showToast('未识别到姓名'); return; }
+  state.nameQueue = names.map(n => ({ name: n, status: 'waiting' }));
+  state.queueIndex = -1;
+  saveQueue();
+  closeImportModal(null);
+  advanceQueue();
+  updateQueueUI();
+  showToast(`已导入 ${names.length} 人`, 'success');
+}
+
+function demoImport() {
+  $importTextarea.value = [
+    '张三', '李四', '王五', '赵六', '陈七',
+    '周八', '吴九', '郑十', '钱十一', '孙十二',
+  ].join('\n');
+  showToast('已填入演示数据，点击确认导入');
+}
+
+function clearQueue() {
+  if (confirm('确定清空名单队列？')) {
+    state.nameQueue = [];
+    state.queueIndex = -1;
+    saveQueue();
+    $candidateName.value = '';
+    updateQueueUI();
+    showToast('队列已清空');
+  }
+}
+
+function advanceQueue() {
+  // Mark current as done
+  if (state.queueIndex >= 0 && state.queueIndex < state.nameQueue.length) {
+    state.nameQueue[state.queueIndex].status = 'done';
+  }
+  // Find next waiting
+  const nextIdx = state.nameQueue.findIndex((item, i) => i > state.queueIndex && item.status === 'waiting');
+  if (nextIdx >= 0) {
+    state.queueIndex = nextIdx;
+    state.nameQueue[state.queueIndex].status = 'current';
+    $candidateName.value = state.nameQueue[state.queueIndex].name;
+  } else if (state.nameQueue.length > 0 && state.queueIndex >= state.nameQueue.length - 1) {
+    // All done
+    state.queueIndex = state.nameQueue.length;
+  } else {
+    state.queueIndex = -1;
+  }
+  saveQueue();
+  updateQueueUI();
+}
+
+function updateQueueUI() {
+  const total = state.nameQueue.length;
+  const done = state.nameQueue.filter(n => n.status === 'done').length;
+  const current = state.nameQueue.find(n => n.status === 'current');
+
+  if (total === 0) {
+    $queueProgress.textContent = '就绪';
+    $queueCurrent.innerHTML = '<span class="queue-current empty">未导入名单</span>';
+    $importBadge.classList.add('hidden');
+    $queueList.innerHTML = '';
+    $queueList.classList.remove('has-items');
+  } else {
+    $queueProgress.textContent = `${done + (current ? 1 : 0)}/${total}`;
+    $queueCurrent.textContent = current ? current.name : (done >= total ? '全部完成 ✓' : '点击展开查看');
+    $queueCurrent.classList.toggle('empty', !current && done < total);
+    $importBadge.classList.remove('hidden');
+    $importBadge.textContent = `${total}人`;
+
+    // Render queue list
+    $queueList.innerHTML = state.nameQueue.map((item, i) => {
+      let cls = '';
+      let dotCls = 'waiting';
+      let idxText = i + 1;
+      if (item.status === 'current') { cls = 'current'; dotCls = 'current'; idxText = '▶'; }
+      else if (item.status === 'done') { cls = 'done'; dotCls = 'done'; idxText = '✓'; }
+      return `
+        <div class="queue-item ${cls}" onclick="jumpToQueue(${i})">
+          <span class="idx">${idxText}</span>
+          <span class="status-dot ${dotCls}"></span>
+          <span style="flex:1">${escapeHtml(item.name)}</span>
+          ${item.status === 'waiting' ? `<button class="btn btn-ghost" onclick="event.stopPropagation();removeQueueItem(${i})" style="padding:2px 6px;font-size:0.6rem">✕</button>` : ''}
+        </div>
+      `;
+    }).join('');
+    $queueList.classList.add('has-items');
+  }
+}
+
+function jumpToQueue(index) {
+  if (index < 0 || index >= state.nameQueue.length) return;
+  if (state.nameQueue[index].status === 'done') return;
+  // Mark any current as waiting
+  state.nameQueue.forEach(item => { if (item.status === 'current') item.status = 'waiting'; });
+  state.queueIndex = index;
+  state.nameQueue[index].status = 'current';
+  $candidateName.value = state.nameQueue[index].name;
+  saveQueue();
+  updateQueueUI();
+  showToast(`已跳至: ${state.nameQueue[index].name}`);
+}
+
+function removeQueueItem(index) {
+  state.nameQueue.splice(index, 1);
+  if (state.queueIndex >= state.nameQueue.length) {
+    state.queueIndex = state.nameQueue.length - 1;
+  }
+  // Fix indices
+  if (state.queueIndex >= 0 && state.nameQueue[state.queueIndex]?.status !== 'current') {
+    state.nameQueue.forEach((item, i) => {
+      item.status = i === state.queueIndex ? 'current' : (i < state.queueIndex ? 'done' : 'waiting');
+    });
+  }
+  saveQueue();
+  updateQueueUI();
+}
+
+function saveQueue() {
+  try {
+    localStorage.setItem('xl_name_queue', JSON.stringify(state.nameQueue));
+    localStorage.setItem('xl_queue_index', state.queueIndex);
+  } catch(e) {}
+}
+
+function toggleQueueExpand() {
+  state.queueOpen = !state.queueOpen;
+  $queueExpand.classList.toggle('open', state.queueOpen);
+  $queueArrow.textContent = state.queueOpen ? '▼' : '▶';
+  if (state.queueOpen) updateQueueUI();
+}
+
+function openImportModal() {
+  $importModal.classList.remove('hidden');
+  $importTextarea.focus();
+}
+
+function closeImportModal(e) {
+  if (e && e.target !== $importModal) return;
+  $importModal.classList.add('hidden');
+}
+
+// ============ CANDIDATE MANAGEMENT ============
+function nextCandidate() {
+  const name = $candidateName.value.trim() || '(未记录姓名)';
+
+  const scoreValues = Object.values(state.scores).filter(v => v > 0);
+  const totalScore = scoreValues.length > 0
+    ? scoreValues.reduce((a, b) => a + b, 0)
+    : null;
+
+  const record = {
+    name: name,
+    scores: { ...state.scores },
+    total: totalScore,
+    duration: state.duration,
+    elapsed: state.total - Math.ceil(state.remaining),
+    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+  };
+
+  if (state.editingIndex >= 0) {
+    // Update existing record
+    state.history[state.editingIndex] = record;
+    state.editingIndex = -1;
+    saveHistory();
+  } else {
+    // New record
+    state.history.unshift(record);
+    saveHistory();
+    // Auto-advance queue only for new candidates
+    advanceQueue();
+  }
+
+  // Reset
+  resetScores();
+  resetTimer();
+  state.remaining = state.total;
+  updateTimerDisplay();
+  updateRing();
+  $timerLabel.textContent = '准备开始';
+
+  updateHistoryUI();
+  updateEditBadge();
+  $btnPrev.disabled = false;
+  $candidateName.focus();
+  showToast(`${record.name} 已保存 ✓`, 'success');
+}
+
+function prevCandidate() {
+  if (state.history.length === 0) {
+    showToast('没有上一位记录');
+    return;
+  }
+
+  // If currently editing, just cancel edit
+  if (state.editingIndex >= 0) {
+    cancelEdit();
+    return;
+  }
+
+  // Pop the most recent record
+  const lastRecord = state.history[0];
+
+  // Also revert queue if this name matches
+  if (state.nameQueue.length > 0) {
+    const currentInQueue = state.nameQueue.find(n => n.status === 'current');
+    if (currentInQueue && currentInQueue.name === lastRecord.name) {
+      currentInQueue.status = 'waiting';
+    }
+    // Find the previous done item in queue and make it current again
+    for (let i = state.nameQueue.length - 1; i >= 0; i--) {
+      if (state.nameQueue[i].status === 'done') {
+        state.nameQueue[i].status = 'current';
+        state.queueIndex = i;
+        break;
+      }
+    }
+    saveQueue();
+    updateQueueUI();
+  }
+
+  // Remove from history
+  state.history.shift();
+  saveHistory();
+
+  // Restore name and scores
+  $candidateName.value = lastRecord.name === '(未记录姓名)' ? '' : lastRecord.name;
+  state.scores = { ...lastRecord.scores };
+  updateScoreUI();
+
+  // Reset timer to original duration
+  resetTimer();
+  state.duration = lastRecord.duration;
+  state.total = lastRecord.duration * 60;
+  state.remaining = state.total;
+  updateTimerDisplay();
+  updateRing();
+
+  updateHistoryUI();
+  $btnPrev.disabled = state.history.length === 0;
+  $candidateName.focus();
+  showToast(`已回退至: ${lastRecord.name}`);
+}
+
+function editRecord(index) {
+  if (index < 0 || index >= state.history.length) return;
+  const record = state.history[index];
+
+  // Save current panel state first if there's unsaved data
+  const hasCurrentData = $candidateName.value.trim() || Object.values(state.scores).some(v => v > 0);
+  if (hasCurrentData && state.editingIndex < 0 && state.editingIndex !== index) {
+    if (!confirm('当前面板有未保存的评分，是否放弃并切换？')) return;
+  }
+
+  state.editingIndex = index;
+  $candidateName.value = record.name === '(未记录姓名)' ? '' : record.name;
+  state.scores = { ...record.scores };
+  state.duration = record.duration;
+  state.total = record.duration * 60;
+  state.remaining = state.total;
+  updateScoreUI();
+  updateTimerDisplay();
+  updateRing();
+  $timerLabel.textContent = '编辑中';
+  resetTimer();
+
+  updateEditBadge();
+  updateHistoryUI();
+  $btnPrev.disabled = false;
+  $btnNext.textContent = '✓ 保存修改';
+  $candidateName.focus();
+  showToast(`正在编辑: ${record.name}`);
+}
+
+function cancelEdit() {
+  state.editingIndex = -1;
+  resetScores();
+  resetTimer();
+  state.remaining = state.total;
+  updateTimerDisplay();
+  updateRing();
+  $timerLabel.textContent = '准备开始';
+  $candidateName.value = '';
+  $btnNext.textContent = '→ 下一位';
+  updateEditBadge();
+  updateHistoryUI();
+  $candidateName.focus();
+}
+
+function updateEditBadge() {
+  // Remove existing badge
+  const existing = document.querySelector('.editing-badge');
+  if (existing) existing.remove();
+
+  if (state.editingIndex >= 0) {
+    const record = state.history[state.editingIndex];
+    const badge = document.createElement('span');
+    badge.className = 'editing-badge';
+    badge.textContent = `正在编辑: ${record.name}`;
+    $scoreRows.parentNode.insertBefore(badge, $scoreRows);
+  }
+}
+
+// ============ HISTORY ============
+function toggleHistory() {
+  state.historyOpen = !state.historyOpen;
+  $historyHeader.classList.toggle('open', state.historyOpen);
+  $historyBody.classList.toggle('open', state.historyOpen);
+  if (state.historyOpen) updateHistoryUI();
+}
+
+function updateHistoryUI() {
+  $historyCount.textContent = `(${state.history.length}人)`;
+  if (state.history.length === 0) {
+    $historyContent.innerHTML = '<div class="history-empty">暂无记录<br>点击"下一位"开始记录</div>';
+    return;
+  }
+  const rows = state.history.map((r, i) => {
+    const dimScores = DIMENSIONS.map(d => {
+      const v = r.scores[d.key] || 0;
+      return v > 0 ? `${d.label.slice(0,2)}:${v}` : '';
+    }).filter(Boolean).join(' ');
+    const isEditing = i === state.editingIndex;
+    return `
+      <tr onclick="editRecord(${i})" style="${isEditing ? 'background:rgba(226,166,84,0.1);outline:1px solid var(--accent-warm);border-radius:4px' : ''}">
+        <td>${state.history.length - i}${isEditing ? ' ✏️' : ''}</td>
+        <td>${escapeHtml(r.name)}</td>
+        <td class="td-score">${r.total !== null ? r.total + '/20' : '-'}</td>
+        <td style="font-size:0.68rem;color:var(--text-secondary)">${dimScores || '-'}</td>
+        <td class="td-time">${r.time}</td>
+        <td><button class="btn btn-ghost" onclick="event.stopPropagation();deleteRecord(${i})" style="padding:2px 4px;font-size:0.6rem">✕</button></td>
+      </tr>
+    `;
+  }).join('');
+  $historyContent.innerHTML = `
+    <table class="history-table">
+      <thead><tr><th>#</th><th>姓名</th><th>总分</th><th>细项</th><th>时间</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function deleteRecord(index) {
+  if (confirm('删除这条记录？')) {
+    if (index === state.editingIndex) cancelEdit();
+    state.history.splice(index, 1);
+    // Fix editingIndex after deletion
+    if (state.editingIndex > index) state.editingIndex--;
+    saveHistory();
+    updateHistoryUI();
+    showToast('已删除');
+  }
+}
+
+function clearHistory() {
+  if (state.history.length === 0) return;
+  if (confirm(`确定清空全部 ${state.history.length} 条面试记录？此操作不可恢复。`)) {
+    state.history = [];
+    saveHistory();
+    updateHistoryUI();
+    showToast('记录已清空');
+  }
+}
+
+function saveHistory() {
+  try {
+    localStorage.setItem('xl_interview_history', JSON.stringify(state.history));
+  } catch(e) { showToast('保存失败，存储空间不足'); }
+}
+
+// ============ EXPORT ============
+function exportData() {
+  if (state.history.length === 0) {
+    showToast('没有可导出的数据');
+    return;
+  }
+  const header = ['排名', '姓名', '总分(/20)', ...DIMENSIONS.map(d => d.label), '面试时长', '记录时间'].join('\t');
+  const rows = state.history.map((r, i) => {
+    const fields = [
+      i + 1,
+      r.name,
+      r.total !== null ? r.total : '-',
+      ...DIMENSIONS.map(d => r.scores[d.key] || '-'),
+      r.duration + 'min',
+      r.time,
+    ];
+    return fields.join('\t');
+  });
+  const text = header + '\n' + rows.join('\n');
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('已复制到剪贴板，可粘贴到 Excel', 'success');
+    }).catch(() => downloadExport(text));
+  } else {
+    downloadExport(text);
+  }
+}
+
+function downloadExport(text) {
+  const blob = new Blob(['﻿' + text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `心路面试记录_${new Date().toLocaleDateString('zh-CN')}.tsv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('已下载', 'success');
+}
+
+// ============ TOAST ============
+let toastTimeout;
+function showToast(msg, type) {
+  clearTimeout(toastTimeout);
+  $toast.textContent = msg;
+  $toast.className = 'toast ' + (type || '');
+  requestAnimationFrame(() => $toast.classList.add('show'));
+  toastTimeout = setTimeout(() => $toast.classList.remove('show'), 1800);
+}
+
+// ============ KEYBOARD ============
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+    if (e.key === 'Enter' && e.target.id === 'candidateName') {
+      e.preventDefault();
+      nextCandidate();
+    }
+    if (e.key === 'Escape' && e.target.id === 'importTextarea') {
+      closeImportModal();
+    }
+    return;
+  }
+
+  switch (e.key.toLowerCase()) {
+    case ' ':
+      e.preventDefault();
+      toggleTimer();
+      break;
+    case 'n':
+      e.preventDefault();
+      nextCandidate();
+      break;
+    case 'b':
+      e.preventDefault();
+      prevCandidate();
+      break;
+    case 'r':
+      if (!e.ctrlKey && !e.metaKey) { e.preventDefault(); resetTimer(); }
+      break;
+    case 'e':
+      if (!e.ctrlKey && !e.metaKey) { e.preventDefault(); exportData(); }
+      break;
+    case '1': case '2': case '3': case '4': case '5':
+      if (!e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setScore('impression', parseInt(e.key));
+        showToast(`综合印象: ${'★'.repeat(parseInt(e.key))}`);
+      }
+      break;
+    case 'h':
+      if (!e.ctrlKey && !e.metaKey) { e.preventDefault(); toggleHistory(); }
+      break;
+    case 'i':
+      if (!e.ctrlKey && !e.metaKey) { e.preventDefault(); openImportModal(); }
+      break;
+    case 'escape':
+      if (state.editingIndex >= 0) {
+        cancelEdit();
+      } else {
+        closeImportModal();
+      }
+      break;
+  }
+});
+
+// ============ HELPERS ============
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ============ INIT ============
+resetScores();
+updateTimerDisplay();
+updateRing();
+updateQueueUI();
+updateHistoryUI();
+
+// Auto-load first candidate on startup
+if (state.nameQueue.length > 0 && state.queueIndex >= 0 && state.queueIndex < state.nameQueue.length) {
+  $candidateName.value = state.nameQueue[state.queueIndex].name;
+}
+$candidateName.focus();
+
+console.log('面试官助手已就绪 · 心路实践团2026');
+console.log('  I=导入名单  Space=开始/暂停  N=下一位  B=上一位  1-5=快速评分  E=导出  Esc=取消编辑');
+console.log('  点击历史记录可修改评分');
+</script>
+</body>
+</html>
